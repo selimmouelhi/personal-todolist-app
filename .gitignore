@@ -1,0 +1,4 @@
+.build/
+.swiftpm/
+OnTrack.app/
+.DS_Store
