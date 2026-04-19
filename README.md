@@ -12,6 +12,7 @@ The app keeps the UI focused on today's work, carries unfinished tasks forward, 
 
 - Native macOS interface built with SwiftUI
 - Modern two-panel layout with a dedicated daily overview
+- Double-click task cards to open full title/body editing
 - Local task persistence with no account or cloud dependency
 - Automatic rollover of unfinished tasks into the current day
 - Scheduled reminders for morning, midday, and wrap-up check-ins
@@ -22,34 +23,34 @@ The app keeps the UI focused on today's work, carries unfinished tasks forward, 
 
 - Swift 6
 - SwiftUI
-- Swift Package Manager
+- Xcode macOS app target
+- XcodeGen project spec
 - UserNotifications
 
 ## Project Structure
 
 ```text
+OnTrack.xcodeproj/  Main Xcode project for running, debugging, and testing
+project.yml         XcodeGen spec used when project structure changes
 Sources/
   App/             App entry point
   Models/          Task and reminder models
   Services/        Persistence and notification scheduling
   Views/           SwiftUI screens and theme
+Tests/
+  OnTrackTests/    Unit tests
 Scripts/
   package_app.sh   Builds and packages OnTrack.app
 ```
 
 ## Running Locally
 
-### Option 1: Xcode
+### Xcode
 
-1. Open this folder in Xcode.
-2. Let Xcode resolve the Swift package automatically.
-3. Run the `OnTrack` target on macOS.
-
-### Option 2: Terminal
-
-```bash
-swift run
-```
+1. Open `OnTrack.xcodeproj` in Xcode.
+2. Select the `OnTrack` scheme.
+3. Run on `My Mac`.
+4. Use `Product > Test` to run `OnTrackTests`.
 
 ## Building the macOS App
 
@@ -66,6 +67,16 @@ OnTrack.app
 ```
 
 You can then open `OnTrack.app` directly from Finder.
+
+## Regenerating The Project
+
+`OnTrack.xcodeproj` is checked in and should be used day to day.
+
+Only regenerate it if you change the project structure in `project.yml`:
+
+```bash
+xcodegen generate
+```
 
 ## GitHub Releases
 

@@ -1,0 +1,41 @@
+name: OnTrack
+options:
+  bundleIdPrefix: com.personal
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    MACOSX_DEPLOYMENT_TARGET: "13.0"
+targets:
+  OnTrack:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.personal.ontrack
+        PRODUCT_NAME: OnTrack
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: OnTrack
+        INFOPLIST_KEY_CFBundleIdentifier: com.personal.ontrack
+        INFOPLIST_KEY_CFBundleName: OnTrack
+        INFOPLIST_KEY_CFBundleShortVersionString: "1.0"
+        INFOPLIST_KEY_CFBundleVersion: "1"
+        INFOPLIST_KEY_LSApplicationCategoryType: public.app-category.productivity
+        INFOPLIST_KEY_NSHighResolutionCapable: YES
+        INFOPLIST_KEY_NSPrincipalClass: NSApplication
+        PRODUCT_MODULE_NAME: OnTrack
+    scheme:
+      testTargets:
+        - OnTrackTests
+  OnTrackTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests/OnTrackTests
+    dependencies:
+      - target: OnTrack
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.personal.ontrack.tests

@@ -3,6 +3,7 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var notifications: NotificationManager
+    @State private var selectedTaskID: UUID?
 
     var body: some View {
         GeometryReader { proxy in
@@ -19,6 +20,23 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
                 .padding(.bottom, 18)
+            }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { selectedTaskID != nil },
+                set: { isPresented in
+                    if !isPresented {
+                        selectedTaskID = nil
+                    }
+                }
+            )
+        ) {
+            if let taskID = selectedTaskID,
+               let task = store.task(withID: taskID) {
+                TaskDetailView(task: task) { title, notes in
+                    store.updateTask(id: taskID, title: title, notes: notes)
+                }
             }
         }
     }
@@ -121,20 +139,9 @@ struct ContentView: View {
 
     private var quickAddCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Text(store.isEditingTask ? "Edit task" : "Add a task")
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .foregroundStyle(Theme.textPrimary)
-
-                Spacer()
-
-                if store.isEditingTask {
-                    Button("Cancel", action: store.cancelEditing)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .foregroundStyle(Theme.textSecondary)
-                        .buttonStyle(.plain)
-                }
-            }
+            Text("Add a task")
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .foregroundStyle(Theme.textPrimary)
 
             TextField("What matters today?", text: $store.draftTitle)
                 .textFieldStyle(.plain)
@@ -142,18 +149,12 @@ struct ContentView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .padding(14)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.cardStrong))
+                .onSubmit(store.addTaskFromDraft)
 
-            TextField("Optional notes", text: $store.draftNotes, axis: .vertical)
-                .textFieldStyle(.plain)
-                .font(.system(size: 14, weight: .medium, design: .rounded))
-                .foregroundStyle(Theme.textSecondary)
-                .padding(14)
-                .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.cardStrong))
-
-            Button(action: store.saveDraftTask) {
+            Button(action: store.addTaskFromDraft) {
                 HStack {
-                    Image(systemName: store.isEditingTask ? "checkmark" : "plus")
-                    Text(store.isEditingTask ? "Save changes" : "Add to today")
+                    Image(systemName: "plus")
+                    Text("Add to today")
                 }
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Theme.backgroundBottom)
@@ -169,6 +170,10 @@ struct ContentView: View {
                 )
             }
             .buttonStyle(.plain)
+
+            Text("Press Enter to create the task. Double-click a task card to open its full title and body.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(Theme.textSecondary)
         }
         .padding(22)
         .cardSurface()
@@ -223,8 +228,8 @@ struct ContentView: View {
                             ForEach(store.openTasks) { task in
                                 TaskCardView(task: task) {
                                     store.toggleTask(task)
-                                } onEdit: {
-                                    store.startEditing(task)
+                                } onOpen: {
+                                    selectedTaskID = task.id
                                 } onDelete: {
                                     store.deleteTask(task)
                                 }
@@ -237,8 +242,8 @@ struct ContentView: View {
                             ForEach(store.completedTasks) { task in
                                 TaskCardView(task: task) {
                                     store.toggleTask(task)
-                                } onEdit: {
-                                    store.startEditing(task)
+                                } onOpen: {
+                                    selectedTaskID = task.id
                                 } onDelete: {
                                     store.deleteTask(task)
                                 }

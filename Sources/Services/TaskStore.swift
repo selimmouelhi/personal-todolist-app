@@ -4,16 +4,12 @@ import Foundation
 final class TaskStore: ObservableObject {
     @Published private(set) var tasks: [TaskItem] = []
     @Published var draftTitle = ""
-    @Published var draftNotes = ""
-    @Published private(set) var editingTaskID: UUID?
 
     private let calendar = Calendar.current
     private let saveURL: URL
 
-    init() {
-        let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let folderURL = baseURL.appendingPathComponent("OnTrack", isDirectory: true)
-        saveURL = folderURL.appendingPathComponent("tasks.json")
+    init(saveURL: URL? = nil) {
+        self.saveURL = saveURL ?? Self.defaultSaveURL
 
         load()
         refreshDayBoundary()
@@ -38,31 +34,34 @@ final class TaskStore: ObservableObject {
         return Double(completedTasks.count) / Double(todayTasks.count)
     }
 
-    var isEditingTask: Bool {
-        editingTaskID != nil
-    }
-
-    func saveDraftTask() {
+    func addTaskFromDraft() {
         let cleanedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        let cleanedNotes = draftNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedTitle.isEmpty else { return }
 
-        if let editingTaskID,
-           let index = tasks.firstIndex(where: { $0.id == editingTaskID }) {
-            tasks[index].title = cleanedTitle
-            tasks[index].notes = cleanedNotes
-            tasks[index].updatedAt = .now
-        } else {
-            tasks.append(
-                TaskItem(
-                    title: cleanedTitle,
-                    notes: cleanedNotes,
-                    scheduledFor: startOfToday()
-                )
+        tasks.append(
+            TaskItem(
+                title: cleanedTitle,
+                scheduledFor: startOfToday()
             )
-        }
+        )
 
         clearDraft()
+        persist()
+    }
+
+    func task(withID id: UUID) -> TaskItem? {
+        tasks.first(where: { $0.id == id })
+    }
+
+    func updateTask(id: UUID, title: String, notes: String) {
+        let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let cleanedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleanedTitle.isEmpty,
+              let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+
+        tasks[index].title = cleanedTitle
+        tasks[index].notes = cleanedNotes
+        tasks[index].updatedAt = .now
         persist()
     }
 
@@ -75,20 +74,7 @@ final class TaskStore: ObservableObject {
 
     func deleteTask(_ task: TaskItem) {
         tasks.removeAll { $0.id == task.id }
-        if editingTaskID == task.id {
-            clearDraft()
-        }
         persist()
-    }
-
-    func startEditing(_ task: TaskItem) {
-        editingTaskID = task.id
-        draftTitle = task.title
-        draftNotes = task.notes
-    }
-
-    func cancelEditing() {
-        clearDraft()
     }
 
     func refreshDayBoundary() {
@@ -144,9 +130,13 @@ final class TaskStore: ObservableObject {
     }
 
     private func clearDraft() {
-        editingTaskID = nil
         draftTitle = ""
-        draftNotes = ""
+    }
+
+    private static var defaultSaveURL: URL {
+        let baseURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+        let folderURL = baseURL.appendingPathComponent("OnTrack", isDirectory: true)
+        return folderURL.appendingPathComponent("tasks.json")
     }
 }
 

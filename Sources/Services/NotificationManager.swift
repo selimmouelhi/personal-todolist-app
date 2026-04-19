@@ -5,9 +5,13 @@ import UserNotifications
 final class NotificationManager: ObservableObject {
     @Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
     let prompts = DailyPrompt.defaults
+    private let center: UNUserNotificationCenter
+
+    init(center: UNUserNotificationCenter = .current()) {
+        self.center = center
+    }
 
     func configure() async {
-        let center = UNUserNotificationCenter.current()
         let settings = await center.notificationSettings()
         authorizationStatus = settings.authorizationStatus
 
@@ -24,7 +28,6 @@ final class NotificationManager: ObservableObject {
     func scheduleDailyPrompts() async {
         guard authorizationStatus == .authorized || authorizationStatus == .provisional else { return }
 
-        let center = UNUserNotificationCenter.current()
         let ids = prompts.map(\.id)
         center.removePendingNotificationRequests(withIdentifiers: ids)
 
