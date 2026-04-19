@@ -23,7 +23,7 @@ struct OnTrackApp: App {
         Settings {
             SettingsView()
                 .environmentObject(notifications)
-                .frame(width: 420, height: 280)
+                .frame(width: 640, height: 620)
         }
     }
 }

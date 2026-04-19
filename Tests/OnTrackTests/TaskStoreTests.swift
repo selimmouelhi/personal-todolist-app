@@ -42,9 +42,51 @@ final class TaskStoreTests: XCTestCase {
         XCTAssertEqual(store.tasks(on: updatedDate).first?.notes, "Use the updated outline")
     }
 
+    func testNotificationManagerLoadsDefaults() {
+        let manager = NotificationManager(saveURL: temporaryReminderURL())
+
+        XCTAssertEqual(manager.prompts.count, 3)
+        XCTAssertEqual(manager.prompts.map(\.title), [
+            "Morning check-in",
+            "Midday progress",
+            "Wrap-up time"
+        ])
+    }
+
+    func testNotificationManagerPersistsEditedPrompt() {
+        let saveURL = temporaryReminderURL()
+        let manager = NotificationManager(saveURL: saveURL)
+
+        var updatedPrompt = manager.prompts[0]
+        updatedPrompt.title = "Deep work checkpoint"
+        updatedPrompt.body = "Make sure the most important work is moving."
+        updatedPrompt.updateTime(from: date(hour: 10, minute: 45))
+
+        manager.updatePrompt(updatedPrompt)
+
+        let reloadedManager = NotificationManager(saveURL: saveURL)
+        XCTAssertEqual(reloadedManager.prompts[0].title, "Deep work checkpoint")
+        XCTAssertEqual(reloadedManager.prompts[0].body, "Make sure the most important work is moving.")
+        XCTAssertEqual(reloadedManager.prompts[0].hour, 10)
+        XCTAssertEqual(reloadedManager.prompts[0].minute, 45)
+    }
+
     private func temporarySaveURL() -> URL {
         let folderURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
         return folderURL.appendingPathComponent("tasks.json")
+    }
+
+    private func temporaryReminderURL() -> URL {
+        let folderURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent(UUID().uuidString, isDirectory: true)
+        return folderURL.appendingPathComponent("reminders.json")
+    }
+
+    private func date(hour: Int, minute: Int) -> Date {
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+        return Calendar.current.date(from: components) ?? .now
     }
 }
