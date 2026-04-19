@@ -2,17 +2,19 @@ import SwiftUI
 
 struct TaskDetailView: View {
     let task: TaskItem
-    let onSave: (String, String) -> Void
+    let onSave: (String, String, Date) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var title: String
     @State private var notes: String
+    @State private var scheduledFor: Date
 
-    init(task: TaskItem, onSave: @escaping (String, String) -> Void) {
+    init(task: TaskItem, onSave: @escaping (String, String, Date) -> Void) {
         self.task = task
         self.onSave = onSave
         _title = State(initialValue: task.title)
         _notes = State(initialValue: task.notes)
+        _scheduledFor = State(initialValue: task.scheduledFor)
     }
 
     var body: some View {
@@ -31,7 +33,7 @@ struct TaskDetailView: View {
                             .font(.system(size: 28, weight: .bold, design: .rounded))
                             .foregroundStyle(Theme.textPrimary)
 
-                        Text("Double-clicked from Today")
+                        Text("Open from any day to edit title, body, and date")
                             .font(.system(size: 14, weight: .medium, design: .rounded))
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -60,6 +62,26 @@ struct TaskDetailView: View {
                                 .fill(Theme.cardStrong)
                         )
                         .onSubmit(saveAndDismiss)
+                }
+
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Date")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .tracking(1.2)
+                        .foregroundStyle(Theme.textMuted)
+
+                    DatePicker(
+                        "",
+                        selection: $scheduledFor,
+                        displayedComponents: [.date]
+                    )
+                    .datePickerStyle(.graphical)
+                    .labelsHidden()
+                    .padding(12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Theme.cardStrong)
+                    )
                 }
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -114,7 +136,7 @@ struct TaskDetailView: View {
     }
 
     private func saveAndDismiss() {
-        onSave(title, notes)
+        onSave(title, notes, scheduledFor)
         dismiss()
     }
 }

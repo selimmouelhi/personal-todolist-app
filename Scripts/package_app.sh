@@ -8,6 +8,10 @@ DERIVED_DATA_DIR="$ROOT_DIR/.build/xcode-release"
 BUILT_APP_DIR="$DERIVED_DATA_DIR/Build/Products/Release/$APP_NAME.app"
 
 cd "$ROOT_DIR"
+if command -v xcodegen >/dev/null; then
+  xcodegen generate >/dev/null
+fi
+
 xcodebuild \
   -project "$ROOT_DIR/$APP_NAME.xcodeproj" \
   -scheme "$APP_NAME" \

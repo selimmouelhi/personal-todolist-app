@@ -15,33 +15,60 @@ final class TaskStore: ObservableObject {
         refreshDayBoundary()
     }
 
-    var todayTasks: [TaskItem] {
-        tasks
-            .filter { calendar.isDate($0.scheduledFor, inSameDayAs: .now) }
-            .sorted(using: KeyPathComparator(\.createdAt))
+    var allTasks: [TaskItem] {
+        tasks.sorted {
+            let leftDay = calendar.startOfDay(for: $0.scheduledFor)
+            let rightDay = calendar.startOfDay(for: $1.scheduledFor)
+            if leftDay == rightDay {
+                return $0.createdAt < $1.createdAt
+            }
+            return leftDay < rightDay
+        }
     }
 
-    var openTasks: [TaskItem] {
-        todayTasks.filter { !$0.isDone }
+    func tasks(on date: Date) -> [TaskItem] {
+        allTasks.filter { calendar.isDate($0.scheduledFor, inSameDayAs: date) }
     }
 
-    var completedTasks: [TaskItem] {
-        todayTasks.filter(\.isDone)
+    func openTasks(on date: Date) -> [TaskItem] {
+        tasks(on: date).filter { !$0.isDone }
     }
 
-    var completionRate: Double {
-        guard !todayTasks.isEmpty else { return 0 }
-        return Double(completedTasks.count) / Double(todayTasks.count)
+    func completedTasks(on date: Date) -> [TaskItem] {
+        tasks(on: date).filter(\.isDone)
     }
 
-    func addTaskFromDraft() {
+    func overdueTasks(relativeTo date: Date) -> [TaskItem] {
+        let selectedDay = calendar.startOfDay(for: date)
+        return allTasks.filter {
+            !calendar.isDate($0.scheduledFor, inSameDayAs: date) &&
+            calendar.startOfDay(for: $0.scheduledFor) < selectedDay &&
+            !$0.isDone
+        }
+    }
+
+    func completionRate(on date: Date) -> Double {
+        let dayTasks = tasks(on: date)
+        guard !dayTasks.isEmpty else { return 0 }
+        return Double(completedTasks(on: date).count) / Double(dayTasks.count)
+    }
+
+    func taskCount(on date: Date) -> Int {
+        tasks(on: date).count
+    }
+
+    func hasTasks(on date: Date) -> Bool {
+        taskCount(on: date) > 0
+    }
+
+    func addTaskFromDraft(for date: Date) {
         let cleanedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedTitle.isEmpty else { return }
 
         tasks.append(
             TaskItem(
                 title: cleanedTitle,
-                scheduledFor: startOfToday()
+                scheduledFor: calendar.startOfDay(for: date)
             )
         )
 
@@ -53,7 +80,7 @@ final class TaskStore: ObservableObject {
         tasks.first(where: { $0.id == id })
     }
 
-    func updateTask(id: UUID, title: String, notes: String) {
+    func updateTask(id: UUID, title: String, notes: String, scheduledFor: Date) {
         let cleanedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedTitle.isEmpty,
@@ -61,6 +88,7 @@ final class TaskStore: ObservableObject {
 
         tasks[index].title = cleanedTitle
         tasks[index].notes = cleanedNotes
+        tasks[index].scheduledFor = calendar.startOfDay(for: scheduledFor)
         tasks[index].updatedAt = .now
         persist()
     }
@@ -78,25 +106,7 @@ final class TaskStore: ObservableObject {
     }
 
     func refreshDayBoundary() {
-        let today = startOfToday()
-        var didChange = false
-
-        for index in tasks.indices {
-            let taskDay = calendar.startOfDay(for: tasks[index].scheduledFor)
-            if taskDay < today && !tasks[index].isDone {
-                tasks[index].scheduledFor = today
-                tasks[index].updatedAt = .now
-                didChange = true
-            }
-        }
-
-        if didChange {
-            persist()
-        }
-    }
-
-    private func startOfToday() -> Date {
-        calendar.startOfDay(for: .now)
+        tasks = allTasks
     }
 
     private func load() {

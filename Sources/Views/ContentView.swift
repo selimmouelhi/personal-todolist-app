@@ -3,7 +3,11 @@ import SwiftUI
 struct ContentView: View {
     @EnvironmentObject private var store: TaskStore
     @EnvironmentObject private var notifications: NotificationManager
+
     @State private var selectedTaskID: UUID?
+    @State private var selectedDate = Calendar.current.startOfDay(for: .now)
+
+    private let calendar = Calendar.current
 
     var body: some View {
         GeometryReader { proxy in
@@ -12,7 +16,7 @@ struct ContentView: View {
 
                 HStack(alignment: .top, spacing: 20) {
                     sidebar
-                        .frame(width: min(max(proxy.size.width * 0.29, 300), 360))
+                        .frame(width: min(max(proxy.size.width * 0.31, 320), 390))
 
                     mainPanel
                         .frame(maxWidth: .infinity)
@@ -34,8 +38,8 @@ struct ContentView: View {
         ) {
             if let taskID = selectedTaskID,
                let task = store.task(withID: taskID) {
-                TaskDetailView(task: task) { title, notes in
-                    store.updateTask(id: taskID, title: title, notes: notes)
+                TaskDetailView(task: task) { title, notes, scheduledFor in
+                    store.updateTask(id: taskID, title: title, notes: notes, scheduledFor: scheduledFor)
                 }
             }
         }
@@ -72,13 +76,15 @@ struct ContentView: View {
                         .font(.system(size: 34, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.textPrimary)
 
-                    Text(formattedDate)
+                    Text(selectedDate.formatted(.dateTime.weekday(.wide).month(.wide).day().year()))
                         .font(.system(size: 15, weight: .medium, design: .rounded))
                         .foregroundStyle(Theme.textSecondary)
                 }
                 .padding(.horizontal, 4)
 
                 statsCard
+                dateNavigator
+                monthCalendarCard
                 quickAddCard
                 reminderCard
             }
@@ -98,7 +104,7 @@ struct ContentView: View {
                     Circle()
                         .stroke(Theme.outline, lineWidth: 10)
                     Circle()
-                        .trim(from: 0, to: store.completionRate)
+                        .trim(from: 0, to: store.completionRate(on: selectedDate))
                         .stroke(
                             AngularGradient(
                                 colors: [Theme.accentCool, Theme.accent, Theme.accentWarm],
@@ -108,21 +114,74 @@ struct ContentView: View {
                         )
                         .rotationEffect(.degrees(-90))
 
-                    Text("\(Int(store.completionRate * 100))%")
+                    Text("\(Int(store.completionRate(on: selectedDate) * 100))%")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(Theme.textPrimary)
                 }
                 .frame(width: 88, height: 88)
 
                 VStack(alignment: .leading, spacing: 10) {
-                    statLine(title: "Open", value: "\(store.openTasks.count)")
-                    statLine(title: "Done", value: "\(store.completedTasks.count)")
-                    statLine(title: "Total", value: "\(store.todayTasks.count)")
+                    statLine(title: "Open", value: "\(store.openTasks(on: selectedDate).count)")
+                    statLine(title: "Done", value: "\(store.completedTasks(on: selectedDate).count)")
+                    statLine(title: "Total", value: "\(store.tasks(on: selectedDate).count)")
+                    statLine(title: "Overdue", value: "\(store.overdueTasks(relativeTo: selectedDate).count)")
                 }
             }
         }
         .padding(22)
         .cardSurface()
+    }
+
+    private var dateNavigator: some View {
+        HStack(spacing: 10) {
+            Button(action: selectPreviousDay) {
+                Image(systemName: "chevron.left")
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 34, height: 34)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Theme.cardStrong)
+                    )
+            }
+            .buttonStyle(.plain)
+
+            Button("Today") {
+                selectedDate = calendar.startOfDay(for: .now)
+            }
+            .font(.system(size: 13, weight: .semibold, design: .rounded))
+            .foregroundStyle(Theme.textPrimary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Theme.cardStrong)
+            )
+            .buttonStyle(.plain)
+
+            Button(action: selectNextDay) {
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 34, height: 34)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Theme.cardStrong)
+                    )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var monthCalendarCard: some View {
+        MonthCalendarView(
+            month: selectedDate,
+            selectedDate: selectedDate,
+            hasTasks: { date in
+                store.hasTasks(on: date)
+            },
+            onSelectDate: { date in
+                selectedDate = calendar.startOfDay(for: date)
+            }
+        )
     }
 
     private func statLine(title: String, value: String) -> some View {
@@ -143,18 +202,22 @@ struct ContentView: View {
                 .font(.system(size: 18, weight: .semibold, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
 
-            TextField("What matters today?", text: $store.draftTitle)
+            TextField("What matters on \(selectedDate.formatted(.dateTime.month(.abbreviated).day()))?", text: $store.draftTitle)
                 .textFieldStyle(.plain)
                 .font(.system(size: 15, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
                 .padding(14)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.cardStrong))
-                .onSubmit(store.addTaskFromDraft)
+                .onSubmit {
+                    store.addTaskFromDraft(for: selectedDate)
+                }
 
-            Button(action: store.addTaskFromDraft) {
+            Button {
+                store.addTaskFromDraft(for: selectedDate)
+            } label: {
                 HStack {
                     Image(systemName: "plus")
-                    Text("Add to today")
+                    Text("Add to \(selectedDateCallToAction)")
                 }
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Theme.backgroundBottom)
@@ -171,7 +234,7 @@ struct ContentView: View {
             }
             .buttonStyle(.plain)
 
-            Text("Press Enter to create the task. Double-click a task card to open its full title and body.")
+            Text("Press Enter to create the task on the selected day. Double-click a task card to open its full title, body, and date.")
                 .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -211,42 +274,46 @@ struct ContentView: View {
 
     private var mainPanel: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("Today")
-                .font(.system(size: 34, weight: .bold, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
-                .padding(.horizontal, 2)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(mainTitle)
+                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 2)
 
-            if store.todayTasks.isEmpty {
+                Text(mainSubtitle)
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 2)
+            }
+
+            if store.tasks(on: selectedDate).isEmpty && store.overdueTasks(relativeTo: selectedDate).isEmpty {
                 emptyState
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             } else {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
-                        if !store.openTasks.isEmpty {
-                            sectionTitle("In motion")
+                        if calendar.isDateInToday(selectedDate),
+                           !store.overdueTasks(relativeTo: selectedDate).isEmpty {
+                            sectionTitle("Overdue")
 
-                            ForEach(store.openTasks) { task in
-                                TaskCardView(task: task) {
-                                    store.toggleTask(task)
-                                } onOpen: {
-                                    selectedTaskID = task.id
-                                } onDelete: {
-                                    store.deleteTask(task)
-                                }
+                            ForEach(store.overdueTasks(relativeTo: selectedDate)) { task in
+                                taskCard(for: task)
                             }
                         }
 
-                        if !store.completedTasks.isEmpty {
+                        if !store.openTasks(on: selectedDate).isEmpty {
+                            sectionTitle(calendar.isDateInToday(selectedDate) ? "In motion" : "Open")
+
+                            ForEach(store.openTasks(on: selectedDate)) { task in
+                                taskCard(for: task)
+                            }
+                        }
+
+                        if !store.completedTasks(on: selectedDate).isEmpty {
                             sectionTitle("Completed")
 
-                            ForEach(store.completedTasks) { task in
-                                TaskCardView(task: task) {
-                                    store.toggleTask(task)
-                                } onOpen: {
-                                    selectedTaskID = task.id
-                                } onDelete: {
-                                    store.deleteTask(task)
-                                }
+                            ForEach(store.completedTasks(on: selectedDate)) { task in
+                                taskCard(for: task)
                             }
                         }
                     }
@@ -263,6 +330,16 @@ struct ContentView: View {
         .cardSurface()
     }
 
+    private func taskCard(for task: TaskItem) -> some View {
+        TaskCardView(task: task) {
+            store.toggleTask(task)
+        } onOpen: {
+            selectedTaskID = task.id
+        } onDelete: {
+            store.deleteTask(task)
+        }
+    }
+
     private func sectionTitle(_ text: String) -> some View {
         Text(text.uppercased())
             .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -273,11 +350,11 @@ struct ContentView: View {
 
     private var emptyState: some View {
         VStack(alignment: .leading, spacing: 18) {
-            Text("A calm start.")
+            Text(calendar.isDateInToday(selectedDate) ? "A calm start." : "Nothing scheduled.")
                 .font(.system(size: 34, weight: .bold, design: .rounded))
                 .foregroundStyle(Theme.textPrimary)
 
-            Text("Add the few tasks that matter today. Unfinished items will roll into tomorrow so the list stays honest without creating clutter.")
+            Text("Use the calendar to move across past and future dates. Add tasks directly to the selected day, and open any task card to reschedule it when plans shift.")
                 .font(.system(size: 16, weight: .medium, design: .rounded))
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: 520, alignment: .leading)
@@ -285,7 +362,34 @@ struct ContentView: View {
         .padding(.top, 48)
     }
 
-    private var formattedDate: String {
-        Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day())
+    private var selectedDateCallToAction: String {
+        calendar.isDateInToday(selectedDate) ? "today" : selectedDate.formatted(.dateTime.month(.abbreviated).day())
+    }
+
+    private var mainTitle: String {
+        if calendar.isDateInToday(selectedDate) {
+            return "Today"
+        }
+        if calendar.isDateInYesterday(selectedDate) {
+            return "Yesterday"
+        }
+        if calendar.isDateInTomorrow(selectedDate) {
+            return "Tomorrow"
+        }
+        return selectedDate.formatted(.dateTime.weekday(.wide))
+    }
+
+    private var mainSubtitle: String {
+        selectedDate.formatted(.dateTime.month(.wide).day().year())
+    }
+
+    private func selectPreviousDay() {
+        guard let date = calendar.date(byAdding: .day, value: -1, to: selectedDate) else { return }
+        selectedDate = calendar.startOfDay(for: date)
+    }
+
+    private func selectNextDay() {
+        guard let date = calendar.date(byAdding: .day, value: 1, to: selectedDate) else { return }
+        selectedDate = calendar.startOfDay(for: date)
     }
 }
