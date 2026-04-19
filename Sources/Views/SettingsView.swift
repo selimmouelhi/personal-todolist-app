@@ -121,12 +121,14 @@ struct SettingsView: View {
 }
 
 private struct PromptEditorRow: View {
+    let prompt: DailyPrompt
     let onChange: (DailyPrompt) -> Void
     let onDelete: () -> Void
 
     @State private var draft: DailyPrompt
 
     init(prompt: DailyPrompt, onChange: @escaping (DailyPrompt) -> Void, onDelete: @escaping () -> Void) {
+        self.prompt = prompt
         self.onChange = onChange
         self.onDelete = onDelete
         _draft = State(initialValue: prompt)
@@ -173,6 +175,11 @@ private struct PromptEditorRow: View {
         }
         .onChange(of: draft.body) { _ in
             commitChanges()
+        }
+        .onChange(of: prompt) { newValue in
+            if draft != newValue {
+                draft = newValue
+            }
         }
     }
 

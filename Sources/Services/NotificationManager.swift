@@ -39,8 +39,16 @@ final class NotificationManager: NSObject, ObservableObject {
     func scheduleDailyPrompts() async {
         guard isAuthorized else { return }
 
-        let ids = prompts.map(\.id)
-        center.removePendingNotificationRequests(withIdentifiers: ids)
+        let currentIDs = Set(prompts.map(\.id))
+        let requests = await center.pendingNotificationRequests()
+        let syncedIDs = requests
+            .map(\.identifier)
+            .filter { $0 != Self.testNotificationID }
+        let idsToRemove = Set(syncedIDs).union(currentIDs)
+
+        if !idsToRemove.isEmpty {
+            center.removePendingNotificationRequests(withIdentifiers: Array(idsToRemove))
+        }
 
         for prompt in prompts {
             let content = UNMutableNotificationContent()

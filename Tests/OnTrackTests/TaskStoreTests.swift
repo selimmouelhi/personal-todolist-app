@@ -71,6 +71,19 @@ final class TaskStoreTests: XCTestCase {
         XCTAssertEqual(reloadedManager.prompts[0].minute, 45)
     }
 
+    func testNotificationManagerResetToDefaultsReplacesSavedCustomPrompts() {
+        let saveURL = temporaryReminderURL()
+        let manager = NotificationManager(saveURL: saveURL)
+
+        manager.addPrompt()
+        XCTAssertEqual(manager.prompts.count, 4)
+
+        manager.resetToDefaults()
+
+        let reloadedManager = NotificationManager(saveURL: saveURL)
+        XCTAssertEqual(reloadedManager.prompts, DailyPrompt.defaults)
+    }
+
     private func temporarySaveURL() -> URL {
         let folderURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)
