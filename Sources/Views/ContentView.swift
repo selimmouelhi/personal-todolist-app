@@ -121,9 +121,20 @@ struct ContentView: View {
 
     private var quickAddCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Add a task")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
+            HStack {
+                Text(store.isEditingTask ? "Edit task" : "Add a task")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+
+                Spacer()
+
+                if store.isEditingTask {
+                    Button("Cancel", action: store.cancelEditing)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.textSecondary)
+                        .buttonStyle(.plain)
+                }
+            }
 
             TextField("What matters today?", text: $store.draftTitle)
                 .textFieldStyle(.plain)
@@ -139,10 +150,10 @@ struct ContentView: View {
                 .padding(14)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.cardStrong))
 
-            Button(action: store.addTask) {
+            Button(action: store.saveDraftTask) {
                 HStack {
-                    Image(systemName: "plus")
-                    Text("Add to today")
+                    Image(systemName: store.isEditingTask ? "checkmark" : "plus")
+                    Text(store.isEditingTask ? "Save changes" : "Add to today")
                 }
                 .font(.system(size: 15, weight: .semibold, design: .rounded))
                 .foregroundStyle(Theme.backgroundBottom)
@@ -212,6 +223,8 @@ struct ContentView: View {
                             ForEach(store.openTasks) { task in
                                 TaskCardView(task: task) {
                                     store.toggleTask(task)
+                                } onEdit: {
+                                    store.startEditing(task)
                                 } onDelete: {
                                     store.deleteTask(task)
                                 }
@@ -224,6 +237,8 @@ struct ContentView: View {
                             ForEach(store.completedTasks) { task in
                                 TaskCardView(task: task) {
                                     store.toggleTask(task)
+                                } onEdit: {
+                                    store.startEditing(task)
                                 } onDelete: {
                                     store.deleteTask(task)
                                 }

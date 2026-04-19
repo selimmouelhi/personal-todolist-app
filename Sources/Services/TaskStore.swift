@@ -5,6 +5,7 @@ final class TaskStore: ObservableObject {
     @Published private(set) var tasks: [TaskItem] = []
     @Published var draftTitle = ""
     @Published var draftNotes = ""
+    @Published private(set) var editingTaskID: UUID?
 
     private let calendar = Calendar.current
     private let saveURL: URL
@@ -37,21 +38,31 @@ final class TaskStore: ObservableObject {
         return Double(completedTasks.count) / Double(todayTasks.count)
     }
 
-    func addTask() {
+    var isEditingTask: Bool {
+        editingTaskID != nil
+    }
+
+    func saveDraftTask() {
         let cleanedTitle = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanedNotes = draftNotes.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanedTitle.isEmpty else { return }
 
-        tasks.append(
-            TaskItem(
-                title: cleanedTitle,
-                notes: cleanedNotes,
-                scheduledFor: startOfToday()
+        if let editingTaskID,
+           let index = tasks.firstIndex(where: { $0.id == editingTaskID }) {
+            tasks[index].title = cleanedTitle
+            tasks[index].notes = cleanedNotes
+            tasks[index].updatedAt = .now
+        } else {
+            tasks.append(
+                TaskItem(
+                    title: cleanedTitle,
+                    notes: cleanedNotes,
+                    scheduledFor: startOfToday()
+                )
             )
-        )
+        }
 
-        draftTitle = ""
-        draftNotes = ""
+        clearDraft()
         persist()
     }
 
@@ -64,7 +75,20 @@ final class TaskStore: ObservableObject {
 
     func deleteTask(_ task: TaskItem) {
         tasks.removeAll { $0.id == task.id }
+        if editingTaskID == task.id {
+            clearDraft()
+        }
         persist()
+    }
+
+    func startEditing(_ task: TaskItem) {
+        editingTaskID = task.id
+        draftTitle = task.title
+        draftNotes = task.notes
+    }
+
+    func cancelEditing() {
+        clearDraft()
     }
 
     func refreshDayBoundary() {
@@ -117,6 +141,12 @@ final class TaskStore: ObservableObject {
         } catch {
             assertionFailure("Failed to save tasks: \(error.localizedDescription)")
         }
+    }
+
+    private func clearDraft() {
+        editingTaskID = nil
+        draftTitle = ""
+        draftNotes = ""
     }
 }
 

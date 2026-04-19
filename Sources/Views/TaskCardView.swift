@@ -3,6 +3,7 @@ import SwiftUI
 struct TaskCardView: View {
     let task: TaskItem
     let onToggle: () -> Void
+    let onEdit: () -> Void
     let onDelete: () -> Void
 
     var body: some View {
@@ -23,8 +24,10 @@ struct TaskCardView: View {
                             .foregroundStyle(Theme.backgroundBottom)
                     }
                 }
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.borderless)
 
             VStack(alignment: .leading, spacing: 6) {
                 Text(task.title)
@@ -42,16 +45,39 @@ struct TaskCardView: View {
 
             Spacer()
 
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "trash")
-                    .foregroundStyle(Theme.textMuted)
+            HStack(spacing: 12) {
+                Button(action: onEdit) {
+                    Label("Edit", systemImage: "square.and.pencil")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.textPrimary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Theme.accentCool.opacity(0.22))
+                        )
+                }
+                .buttonStyle(.borderless)
+
+                Button(role: .destructive, action: onDelete) {
+                    Label("Delete", systemImage: "trash")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(Theme.textPrimary)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Color.red.opacity(0.24))
+                        )
+                }
+                .buttonStyle(.borderless)
             }
-            .buttonStyle(.plain)
         }
         .padding(18)
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .fill(task.isDone ? Theme.card : Theme.cardStrong)
         )
+        .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
