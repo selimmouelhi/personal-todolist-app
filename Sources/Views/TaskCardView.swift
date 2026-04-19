@@ -64,6 +64,7 @@ struct TaskCardView: View {
                 .fill(task.isDone ? Theme.card : Theme.cardStrong)
         )
         .contentShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .draggable(task.id.uuidString)
         .onTapGesture(count: 2, perform: onOpen)
     }
 }

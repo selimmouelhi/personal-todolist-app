@@ -4,7 +4,9 @@ struct MonthCalendarView: View {
     let month: Date
     let selectedDate: Date
     let hasTasks: (Date) -> Bool
+    let onChangeMonth: (Int) -> Void
     let onSelectDate: (Date) -> Void
+    let onDropTask: (UUID, Date) -> Void
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 7)
@@ -12,9 +14,37 @@ struct MonthCalendarView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(month.formatted(.dateTime.month(.wide).year()))
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
+            HStack {
+                Button(action: { onChangeMonth(-1) }) {
+                    Image(systemName: "chevron.left")
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(width: 30, height: 30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Theme.cardStrong)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Spacer()
+
+                Text(month.formatted(.dateTime.month(.wide).year()))
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+
+                Spacer()
+
+                Button(action: { onChangeMonth(1) }) {
+                    Image(systemName: "chevron.right")
+                        .foregroundStyle(Theme.textPrimary)
+                        .frame(width: 30, height: 30)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(Theme.cardStrong)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
 
             LazyVGrid(columns: columns, spacing: 8) {
                 ForEach(weekdaySymbols, id: \.self) { symbol in
@@ -41,6 +71,7 @@ struct MonthCalendarView: View {
     private func dayCell(for date: Date) -> some View {
         let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
         let isToday = calendar.isDateInToday(date)
+        let isDropTarget = monthContains(date)
 
         return Button {
             onSelectDate(date)
@@ -61,6 +92,17 @@ struct MonthCalendarView: View {
             )
         }
         .buttonStyle(.plain)
+        .dropDestination(for: String.self) { items, _ in
+            guard isDropTarget,
+                  let first = items.first,
+                  let taskID = UUID(uuidString: first) else {
+                return false
+            }
+
+            onDropTask(taskID, date)
+            onSelectDate(date)
+            return true
+        }
     }
 
     private func backgroundColor(isSelected: Bool, isToday: Bool) -> Color {
@@ -98,5 +140,10 @@ struct MonthCalendarView: View {
         }
 
         return values
+    }
+
+    private func monthContains(_ date: Date) -> Bool {
+        guard let interval = calendar.dateInterval(of: .month, for: month) else { return false }
+        return interval.contains(date)
     }
 }

@@ -6,6 +6,7 @@ struct ContentView: View {
 
     @State private var selectedTaskID: UUID?
     @State private var selectedDate = Calendar.current.startOfDay(for: .now)
+    @State private var displayedMonth = Calendar.current.startOfDay(for: .now)
 
     private let calendar = Calendar.current
 
@@ -147,6 +148,7 @@ struct ContentView: View {
 
             Button("Today") {
                 selectedDate = calendar.startOfDay(for: .now)
+                displayedMonth = calendar.startOfDay(for: .now)
             }
             .font(.system(size: 13, weight: .semibold, design: .rounded))
             .foregroundStyle(Theme.textPrimary)
@@ -173,13 +175,20 @@ struct ContentView: View {
 
     private var monthCalendarCard: some View {
         MonthCalendarView(
-            month: selectedDate,
+            month: displayedMonth,
             selectedDate: selectedDate,
             hasTasks: { date in
                 store.hasTasks(on: date)
             },
+            onChangeMonth: { offset in
+                shiftDisplayedMonth(by: offset)
+            },
             onSelectDate: { date in
                 selectedDate = calendar.startOfDay(for: date)
+                displayedMonth = calendar.startOfDay(for: date)
+            },
+            onDropTask: { taskID, date in
+                store.rescheduleTask(id: taskID, to: date)
             }
         )
     }
@@ -386,10 +395,17 @@ struct ContentView: View {
     private func selectPreviousDay() {
         guard let date = calendar.date(byAdding: .day, value: -1, to: selectedDate) else { return }
         selectedDate = calendar.startOfDay(for: date)
+        displayedMonth = calendar.startOfDay(for: date)
     }
 
     private func selectNextDay() {
         guard let date = calendar.date(byAdding: .day, value: 1, to: selectedDate) else { return }
         selectedDate = calendar.startOfDay(for: date)
+        displayedMonth = calendar.startOfDay(for: date)
+    }
+
+    private func shiftDisplayedMonth(by offset: Int) {
+        guard let month = calendar.date(byAdding: .month, value: offset, to: displayedMonth) else { return }
+        displayedMonth = calendar.startOfDay(for: month)
     }
 }

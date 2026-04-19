@@ -93,6 +93,13 @@ final class TaskStore: ObservableObject {
         persist()
     }
 
+    func rescheduleTask(id: UUID, to scheduledFor: Date) {
+        guard let index = tasks.firstIndex(where: { $0.id == id }) else { return }
+        tasks[index].scheduledFor = calendar.startOfDay(for: scheduledFor)
+        tasks[index].updatedAt = .now
+        persist()
+    }
+
     func toggleTask(_ task: TaskItem) {
         guard let index = tasks.firstIndex(where: { $0.id == task.id }) else { return }
         tasks[index].isDone.toggle()
