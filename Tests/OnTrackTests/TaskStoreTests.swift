@@ -84,6 +84,27 @@ final class TaskStoreTests: XCTestCase {
         XCTAssertEqual(reloadedManager.prompts, DailyPrompt.defaults)
     }
 
+    func testRescheduleTaskToSelectedDayRemovesOverdueState() {
+        let saveURL = temporarySaveURL()
+        let store = TaskStore(saveURL: saveURL)
+        let today = Calendar.current.startOfDay(for: .now)
+        let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: today)!
+
+        store.draftTitle = "Move me forward"
+        store.addTaskFromDraft(for: yesterday)
+
+        guard let task = store.tasks(on: yesterday).first else {
+            return XCTFail("Expected an overdue task to be created")
+        }
+
+        XCTAssertEqual(store.overdueTasks(relativeTo: today).map(\.id), [task.id])
+
+        store.rescheduleTask(id: task.id, to: today)
+
+        XCTAssertTrue(store.overdueTasks(relativeTo: today).isEmpty)
+        XCTAssertEqual(store.tasks(on: today).map(\.id), [task.id])
+    }
+
     private func temporarySaveURL() -> URL {
         let folderURL = FileManager.default.temporaryDirectory
             .appendingPathComponent(UUID().uuidString, isDirectory: true)

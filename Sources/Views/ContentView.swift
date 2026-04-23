@@ -351,6 +351,15 @@ struct ContentView: View {
         .padding(.top, 24)
         .padding(.bottom, 20)
         .cardSurface()
+        .dropDestination(for: String.self) { items, _ in
+            guard let first = items.first,
+                  let taskID = UUID(uuidString: first) else {
+                return false
+            }
+
+            store.rescheduleTask(id: taskID, to: selectedDate)
+            return true
+        }
     }
 
     private func taskCard(for task: TaskItem) -> some View {
