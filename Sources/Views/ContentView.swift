@@ -253,9 +253,19 @@ struct ContentView: View {
 
     private var reminderCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Daily rhythm")
-                .font(.system(size: 18, weight: .semibold, design: .rounded))
-                .foregroundStyle(Theme.textPrimary)
+            HStack {
+                Text("Daily rhythm")
+                    .font(.system(size: 18, weight: .semibold, design: .rounded))
+                    .foregroundStyle(Theme.textPrimary)
+
+                Spacer()
+
+                settingsButton
+            }
+
+            Text("Scheduled reminders: \(notifications.pendingReminderCount)")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(Theme.textSecondary)
 
             ForEach(notifications.prompts) { prompt in
                 HStack {
@@ -276,6 +286,10 @@ struct ContentView: View {
                 .padding(14)
                 .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Theme.cardStrong))
             }
+
+            Text("Edit reminder times and send a test notification from Settings.")
+                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .foregroundStyle(Theme.textSecondary)
         }
         .padding(22)
         .cardSurface()
@@ -407,5 +421,32 @@ struct ContentView: View {
     private func shiftDisplayedMonth(by offset: Int) {
         guard let month = calendar.date(byAdding: .month, value: offset, to: displayedMonth) else { return }
         displayedMonth = calendar.startOfDay(for: month)
+    }
+
+    @ViewBuilder
+    private var settingsButton: some View {
+        if #available(macOS 14.0, *) {
+            SettingsLink {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.cardStrong))
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button(action: openLegacySettings) {
+                Image(systemName: "slider.horizontal.3")
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(8)
+                    .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.cardStrong))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func openLegacySettings() {
+        #if os(macOS)
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        #endif
     }
 }

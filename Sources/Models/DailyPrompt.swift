@@ -1,11 +1,11 @@
 import Foundation
 
-struct DailyPrompt: Identifiable, Hashable {
-    let id: String
-    let hour: Int
-    let minute: Int
-    let title: String
-    let body: String
+struct DailyPrompt: Identifiable, Hashable, Codable {
+    var id: String
+    var hour: Int
+    var minute: Int
+    var title: String
+    var body: String
 
     var timeLabel: String {
         let formatter = DateFormatter()
@@ -19,6 +19,19 @@ struct DailyPrompt: Identifiable, Hashable {
 
         let date = Calendar.current.date(from: components) ?? .now
         return formatter.string(from: date)
+    }
+
+    var timeDate: Date {
+        var components = DateComponents()
+        components.hour = hour
+        components.minute = minute
+        return Calendar.current.date(from: components) ?? .now
+    }
+
+    mutating func updateTime(from date: Date) {
+        let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+        hour = components.hour ?? hour
+        minute = components.minute ?? minute
     }
 
     static let defaults: [DailyPrompt] = [
